@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("refresh").addEventListener("click", () => {
         refresh(id);
     })
+    window.setInterval(() => refresh(id), 3000);
 })
 
 async function loadGrid() {
@@ -14,6 +15,10 @@ async function loadGrid() {
     let nx = pixels.nx;
     let ny = pixels.ny;
     let data = pixels.data;
+
+    const grid = document.getElementById("grid");
+    grid.style.gridTemplateColumns  = `repeat(${nx},4px)`;
+    grid.style.gridTemplateRows = `repeat(${ny},4px)`;
     for (let i = 0; i < nx; i++) {
         for (let j = 0; j < ny; j++) {
             pixel = document.createElement("div");
@@ -43,8 +48,8 @@ async function refresh(id) {
     let pixelsResponse = await fetch(PIXEL_URL+"getmap?id="+id);
     let pixels = await pixelsResponse.json();
     let deltas = pixels.deltas;
-    for (delta of deltas) {
-        pixel = document.getElementById(`${delta[0]}-${delta[1]}`);
-        pixel.style.background = `rgb(${delta[2]},${delta[3]},${delta[4]})`;
+    for (let [x, y, r, g, b] of deltas) { 
+        pixel = document.getElementById(`${x}-${y}`);
+        pixel.style.background = `rgb(${r},${g},${b})`;
     }
 }

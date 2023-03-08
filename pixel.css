@@ -8,7 +8,6 @@
   #grid {
     margin: 10px 0 50px 0;
     display: grid;
-    grid-template-columns: repeat(100, 1fr);
   }
   
   #grid > div {
