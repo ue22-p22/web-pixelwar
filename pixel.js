@@ -22,8 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         let [r, g, b] = pixel
                         div.style.backgroundColor = `rgb(${r}, ${g}, ${b})`
                         div.addEventListener('click', async (event) => {
-                            await paintServerPixel(id, i, j)
-                            refresh(id)
+                            if (event.shiftKey) {
+                                pickColorFrom(div)
+                            } else {
+                                await paintServerPixel(id, i, j)
+                                refresh(id)
+                            }
                         })
                         grid.appendChild(div)
                     }
@@ -33,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
     }
 
-    const paintServerPixel = (id, i, j) => {
+    const paintServerPixel = async (id, i, j) => {
         const [r, g, b] = getPickedColorInRGB()
         const url = `${PIXEL_URL}set/${id}/${i}/${j}/${r}/${g}/${b}`
         const message = `${i}x${j} into ${r}/${g}/${b}`
@@ -71,4 +75,22 @@ document.addEventListener("DOMContentLoaded", () => {
         return [r, g, b];
     }
 
+    function pickColorFrom(div) {
+        // we're going to set the 'value' property' of the picker
+        // but it expects a #123456 format
+        const colorpicker = document.getElementById("colorpicker")
+
+        // this returns a rgb(12, 23, 34)
+        const clickedRgb = window.getComputedStyle(div).backgroundColor
+        // extract the 3 colors as decimal strings
+        // https://stackoverflow.com/questions/10970958/get-a-color-component-from-an-rgb-string-in-javascript
+        const colors = clickedRgb.match(/\d+/g)
+        // convert into 2-digits hexa
+        // https://stackoverflow.com/questions/17204335/convert-decimal-to-hex-missing-padded-0
+        const tohex = (color) => Number(color).toString(16).padStart(2, '0')
+        const hexas = colors.map(tohex)
+        const newvalue = `#${hexas[0]}${hexas[1]}${hexas[2]}`
+        console.log(newvalue)
+        colorpicker.value = newvalue
+    }
 })
