@@ -1,37 +1,63 @@
 const PIXEL_URL = "http://pixels-war.oie-lab.net/"
 
 document.addEventListener("DOMContentLoaded", () => {
-    fetch(PIXEL_URL+"getmap/")
-        .then((response) => response.json())
-        .then((json) => {
-            console.log(json);
-            //TODO: maintenant que j'ai le JSON, afficher la grille, et récupérer l'id
+    WIDTH = null
 
-            //TODO: maintenant que j'ai l'id, attacher la fonction refresh(id), à compléter, au clic du bouton refresh
+    init()
 
-            //TODO: attacher au clic de chaque pixel une fonction qui demande au serveur de colorer le pixel sous là forme :
-            // http://pixels-war.oie-lab.net/set/id/x/y/r/g/b
-            // la fonction getPickedColorInRGB ci-dessous peut aider
-
-            //TODO: pourquoi pas rafraichir la grille toutes les 3 sec ?
-
-            //TODO: voire même rafraichir la grille après avoir cliqué sur un pixel ?
-
-            //TODO: pour les avancés: ça pourrait être utile de pouvoir
-            // choisir la couleur à partir d'un pixel ?
-        })
-
-    //TODO: pour les personnes avancées, comment transformer les deux "then" ci-dessus en "asynch / await" ?
-
-    //A compléter puis à attacher au bouton refresh en passant mon id une fois récupéré
-    function refresh(id) {
-        fetch(PIXEL_URL+"getmap?id="+id)
+    function init () {
+        fetch(PIXEL_URL+"getmap/")
             .then((response) => response.json())
             .then((json) => {
-                //TODO: maintenant que j'ai le json des deltas, mettre à jour les pixels qui ont changé.
-                //"Here be dragons" : comment récupérer le bon div ?
+                const id = json.id
+                console.log(`my id is ${id}`)
+                pixels = json.data
+                const height = pixels.length
+                WIDTH = pixels[0].length
+                const grid = document.getElementById('grid')
+                //TODO: maintenant que j'ai le JSON, afficher la grille, et récupérer l'id
+                for (const [i, row] of pixels.entries())
+                    for (const [j, pixel] of row.entries()) {
+                        let div = document.createElement('div')
+                        let [r, g, b] = pixel
+                        div.style.backgroundColor = `rgb(${r}, ${g}, ${b})`
+                        div.addEventListener('click', async (event) => {
+                            await paintServerPixel(id, i, j)
+                            refresh(id)
+                        })
+                        grid.appendChild(div)
+                    }
 
+                document.getElementById("refresh").addEventListener('click', () => refresh(id))
+                window.setInterval( () => refresh(id), 2000)
             })
+    }
+
+    const paintServerPixel = (id, i, j) => {
+        const [r, g, b] = getPickedColorInRGB()
+        const url = `${PIXEL_URL}set/${id}/${i}/${j}/${r}/${g}/${b}`
+        const message = `${i}x${j} into ${r}/${g}/${b}`
+        fetch(url)
+            .then(() => console.log(`done painting ${message}`))
+            .catch(() => console.log(`could not set ${message}`))
+    }
+
+    const paintLocalPixel = (i, j, r, g, b) => {
+        const div = document.getElementById("grid").children[i*WIDTH+j]
+        // console.log('setting color=', r, g, b, 'on', div)
+        div.style.backgroundColor = `rgb(${r}, ${g}, ${b})`
+    }
+
+    // A compléter puis à attacher au bouton refresh en passant mon id une fois récupéré
+    async function refresh(id) {
+        const response = await fetch(PIXEL_URL+"getmap?id="+id)
+        const json = await response.json()
+        // console.log('deltas', json)
+        const deltas = json.deltas
+        if (deltas.length)
+            console.log(`refreshing ${deltas.length} pixels`)
+        for (const [i, j, r, g, b] of deltas)
+            paintLocalPixel(i, j, r, g, b)
     }
 
     //Petite fonction facilitatrice pour récupérer la couleur cliquée en RGB
