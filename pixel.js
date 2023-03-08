@@ -1,48 +1,50 @@
 const PIXEL_URL = "http://pixels-war.oie-lab.net/"
 
-document.addEventListener("DOMContentLoaded", () => {
-    fetch(PIXEL_URL+"getmap/")
-        .then((response) => response.json())
-        .then((json) => {
-            console.log(json);
-            //TODO: maintenant que j'ai le JSON, afficher la grille, et récupérer l'id
-
-            //TODO: maintenant que j'ai l'id, attacher la fonction refresh(id), à compléter, au clic du bouton refresh
-
-            //TODO: attacher au clic de chaque pixel une fonction qui demande au serveur de colorer le pixel sous là forme :
-            // http://pixels-war.oie-lab.net/set/id/x/y/r/g/b
-            // la fonction getPickedColorInRGB ci-dessous peut aider
-
-            //TODO: pourquoi pas rafraichir la grille toutes les 3 sec ?
-
-            //TODO: voire même rafraichir la grille après avoir cliqué sur un pixel ?
-
-            //TODO: pour les avancés: ça pourrait être utile de pouvoir
-            // choisir la couleur à partir d'un pixel ?
-        })
-
-    //TODO: pour les personnes avancées, comment transformer les deux "then" ci-dessus en "asynch / await" ?
-
-    //A compléter puis à attacher au bouton refresh en passant mon id une fois récupéré
-    function refresh(id) {
-        fetch(PIXEL_URL+"getmap?id="+id)
-            .then((response) => response.json())
-            .then((json) => {
-                //TODO: maintenant que j'ai le json des deltas, mettre à jour les pixels qui ont changé.
-                //"Here be dragons" : comment récupérer le bon div ?
-
-            })
-    }
-
-    //Petite fonction facilitatrice pour récupérer la couleur cliquée en RGB
-    function getPickedColorInRGB() {
-        let colorHexa = document.getElementById("colorpicker").value
-
-        let r = parseInt(colorHexa.substring(1,3),16);
-        let g = parseInt(colorHexa.substring(3,5),16);
-        let b = parseInt(colorHexa.substring(5,7),16);
-
-        return [r, g, b];
-    }
-
+document.addEventListener("DOMContentLoaded", async () => {
+    let id = await loadGrid();
+    document.getElementById("refresh").addEventListener("click", () => {
+        refresh(id);
+    })
 })
+
+async function loadGrid() {
+    let pixelsResponse = await fetch(PIXEL_URL+"getmap/");
+    let pixels = await pixelsResponse.json();
+    let id = pixels.id;
+    let nx = pixels.nx;
+    let ny = pixels.ny;
+    let data = pixels.data;
+    for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < ny; j++) {
+            pixel = document.createElement("div");
+            pixel.id = `${i}-${j}`;
+            pixel.addEventListener("click", () => colorPixel(id, i, j));
+            pixel.style.background = `rgb(${data[i][j][0]},${data[i][j][1]},${data[i][j][2]})`;
+            document.getElementById("grid").appendChild(pixel);
+        }
+    }
+    return id;
+}
+
+function colorPixel(id, x, y) {
+    let colorHexa = document.getElementById("colorpicker").value
+
+    let r = parseInt(colorHexa.substring(1,3),16);
+    let g = parseInt(colorHexa.substring(3,5),16);
+    let b = parseInt(colorHexa.substring(5,7),16);
+
+    let url = PIXEL_URL+`set/${id}/${x}/${y}/${r}/${g}/${b}`;
+    
+    fetch(url)
+        .then(() => refresh(id));
+}
+
+async function refresh(id) {
+    let pixelsResponse = await fetch(PIXEL_URL+"getmap?id="+id);
+    let pixels = await pixelsResponse.json();
+    let deltas = pixels.deltas;
+    for (delta of deltas) {
+        pixel = document.getElementById(`${delta[0]}-${delta[1]}`);
+        pixel.style.background = `rgb(${delta[2]},${delta[3]},${delta[4]})`;
+    }
+}
